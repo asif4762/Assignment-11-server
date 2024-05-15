@@ -61,6 +61,16 @@ async function run() {
         res.send(result);
     })
 
+    app.get('/pending-assignments', async (req, res) => {
+        console.log(req.query.marks);
+        let query = {};
+        if(req.query?.marks){
+            query = {marks: req.query.marks}
+        }
+        const result = await assignmentCollection.find(query).toArray();
+        res.send(result);
+    })
+
     app.post('/assignments', async(req, res) => {
         const assignment = req.body;
         const result = await assignmentCollection.insertOne(assignment);
