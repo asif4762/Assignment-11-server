@@ -7,14 +7,17 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5500;
 
-app.use(cors({
-    origin: [
-        'http://localhost:5173',
+app.use (
+    cors({
+        origin:[
+        "http://localhost:5173",
+        "https://assignment-11-80f5f.web.app",
+        "https://assignment-11-80f5f.firebaseapp.com",
+    ],
+        credentials: true,
+    })
+);
 
-    ],    
-    credentials: true,
-    optionsSuccessStatus: 200,
-}));
 app.use(express.json());
 app.use(cookieParser())
 
@@ -46,10 +49,16 @@ const client = new MongoClient(uri, {
   }
 });
 
+const cookeOption =  {
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    secure: process.env.NODE_ENV ==='production' ? true : false,
+} 
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const assignmentCollection = client.db('assignmentDB').collection('assignements');
 
@@ -59,21 +68,11 @@ async function run() {
         const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
             expiresIn:'365d'
         })
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV ==='production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-
-        }).send({success: true})
+        res.cookie('token', token, cookeOption).send({success: true})
     })
 
     app.get('/logout', (req, res) =>{
-        res.clearCookie('token',{
-            httpOnly: true,
-            secure: process.env.NODE_ENV ==='production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' :'strict',
-            maxAge:0,
-        })
+        res.clearCookie('token',{...cookeOption , maxAge: 0})
         .send({success: true})
     })
 
@@ -83,19 +82,15 @@ async function run() {
         res.send(result);
     })
 
-    app.get('/assignments/:id', verifyToken,async(req, res) => {
+    app.get('/assignments/:id',async(req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id)}
         const result = await assignmentCollection.findOne(query);
         res.send(result);
     })
 
-    app.get('/my-assignments', verifyToken,verifyToken,async (req, res) =>{
-        const tokenEmail = req.user.email;
+    app.get('/my-assignments',async (req, res) =>{
         const email = req.query?.email;
-        if(tokenEmail !== email){
-            return res.status(403).send({message: "Forbidden access"});
-        }
         let query = {};
         if(req.query?.email){
             query = {email: req.query.email}
@@ -113,13 +108,13 @@ async function run() {
         res.send(result);
     })
 
-    app.post('/assignments', verifyToken,async(req, res) => {
+    app.post('/assignments',async(req, res) => {
         const assignment = req.body;
         const result = await assignmentCollection.insertOne(assignment);
         res.send(result);
     })
 
-    app.put('/Update-assignments/:id', verifyToken,async (req, res) => {
+    app.put('/Update-assignments/:id',async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const updateData = {
             $set:{
@@ -133,7 +128,7 @@ async function run() {
     res.send(result);
     })
 
-    app.patch('/update-marks/:id', verifyToken,async (req, res) => {
+    app.patch('/update-marks/:id',async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const updateData = {
             $set:{
@@ -145,14 +140,14 @@ async function run() {
         
     })
 
-    app.delete('/delete/:id', verifyToken,async (req, res) => {
+    app.delete('/delete/:id',async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const result = await assignmentCollection.deleteOne(query);
         res.send(result);
     })
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
