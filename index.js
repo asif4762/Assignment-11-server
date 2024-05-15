@@ -1,12 +1,20 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5500;
 
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+
+    ],    
+    credentials: true,
+    optionsSuccessStatus: 200,
+}));
 app.use(express.json());
 
 
@@ -29,7 +37,29 @@ async function run() {
 
     const assignmentCollection = client.db('assignmentDB').collection('assignements');
 
-    
+    app.post('/jwt', async (req, res) => {
+        const user = req.body;
+        console.log('User = ', user);
+        const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
+            expiresIn:'365d'
+        })
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV ==='production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+
+        }).send({success: true})
+    })
+
+    app.get('/logout', (req, res) =>{
+        res.clearCookie('token',{
+            httpOnly: true,
+            secure: process.env.NODE_ENV ==='production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' :'strict',
+            maxAge:0,
+        })
+        .send({success: true})
+    })
 
     app.get('/assignments', async(req, res) =>{
         const cursor = assignmentCollection.find();
