@@ -19,7 +19,20 @@ app.use(express.json());
 app.use(cookieParser())
 
 const verifyToken = (req, res, next) =>{
-    
+    const token = req.cookies?.token;
+    if(!token) return res.status(401).send({message: "unauthorized access"});
+        console.log(token);
+        if(token){
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+                if(err){
+                    console.log(err);
+                  return res.status(401).send({message: "unauthorized access"});
+                }
+                console.log(decoded);
+                req.user = decoded;
+                next()
+            })
+        }
 }
  
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.rurzeff.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -70,23 +83,18 @@ async function run() {
         res.send(result);
     })
 
-    app.get('/assignments/:id', async(req, res) => {
+    app.get('/assignments/:id', verifyToken,async(req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id)}
         const result = await assignmentCollection.findOne(query);
         res.send(result);
     })
 
-    app.get('/my-assignments', async (req, res) =>{
-        const token = req.cookies?.token;
-        console.log(token);
-        if(token){
-            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-                if(err){
-                  return console.log(err);
-                }
-                console.log(decoded);
-            } )
+    app.get('/my-assignments', verifyToken,verifyToken,async (req, res) =>{
+        const tokenEmail = req.user.email;
+        const email = req.query?.email;
+        if(tokenEmail !== email){
+            return res.status(403).send({message: "Forbidden access"});
         }
         let query = {};
         if(req.query?.email){
@@ -105,13 +113,13 @@ async function run() {
         res.send(result);
     })
 
-    app.post('/assignments', async(req, res) => {
+    app.post('/assignments', verifyToken,async(req, res) => {
         const assignment = req.body;
         const result = await assignmentCollection.insertOne(assignment);
         res.send(result);
     })
 
-    app.put('/Update-assignments/:id', async (req, res) => {
+    app.put('/Update-assignments/:id', verifyToken,async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const updateData = {
             $set:{
@@ -125,7 +133,7 @@ async function run() {
     res.send(result);
     })
 
-    app.patch('/update-marks/:id', async (req, res) => {
+    app.patch('/update-marks/:id', verifyToken,async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const updateData = {
             $set:{
@@ -137,7 +145,7 @@ async function run() {
         
     })
 
-    app.delete('/delete/:id', async (req, res) => {
+    app.delete('/delete/:id', verifyToken,async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const result = await assignmentCollection.deleteOne(query);
         res.send(result);
