@@ -42,7 +42,6 @@ async function run() {
     })
 
     app.get('/my-assignments', async (req, res) =>{
-        console.log(req.query.email);
         let query = {};
         if(req.query?.email){
             query = {email: req.query.email}
@@ -52,7 +51,6 @@ async function run() {
     })
 
     app.get('/difficulty-assignments/', async (req, res) => {
-        console.log(req.query.difficulty_level);
         let query = {};
         if(req.query?.difficulty_level){
             query = {difficulty_level: req.query.difficulty_level}
@@ -78,20 +76,17 @@ async function run() {
             }
         }
         const result = await assignmentCollection.updateOne(query, updateData);
-    console.log(result);
     res.send(result);
     })
 
     app.patch('/update-marks/:id', async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
-        console.log(req.body.marks);
         const updateData = {
             $set:{
                 marks : req.body.marks
             }
         }
         const result = await assignmentCollection.updateOne(query, updateData);
-        console.log(result);
         res.send(result);
         
     })
@@ -99,7 +94,6 @@ async function run() {
     app.delete('/delete/:id', async (req, res) => {
         const query = {_id: new ObjectId(req.params.id)};
         const result = await assignmentCollection.deleteOne(query);
-        console.log(result);
         res.send(result);
     })
 
